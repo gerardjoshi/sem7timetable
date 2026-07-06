@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B.Tech Timetable - July 2026</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --text: #0f172a;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --break-bg: #f1f5f9;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--surface);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .controls button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+        .controls button:hover {
+            background-color: var(--primary-hover);
+        }
+        .controls button.active-btn {
+            background-color: #10b981;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            font-weight: 500;
+            color: var(--text-light);
+        }
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        .schedule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .slot-card {
+            display: flex;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            align-items: center;
+        }
+        .slot-card.break {
+            background-color: var(--break-bg);
+            justify-content: center;
+            padding: 12px;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+        .time-col {
+            min-width: 120px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .details-col {
+            flex-grow: 1;
+        }
+        .subject-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        .prof-name {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>B.Tech EEE Timetable</h1>
+        <div class="controls">
+            <button id="notifyBtn" onclick="enableNotifications()">Enable Notifications</button>
+            <button id="editBtn" onclick="toggleEditMode()">Edit Schedule</button>
+        </div>
+    </div>
+
+    <div class="tabs" id="dayTabs">
+        </div>
+
+    <div class="schedule-list" id="scheduleView">
+        </div>
+</div>
+
+<script>
+    // System Data extraction
+    const subjects = {
+        "None": { name: "Free Slot", prof: "-" },
+        "C1": { name: "Battery Management Systems (EEPE45)", prof: "Dr. Pinkymol K.P" },
+        "D1": { name: "Economic Eval. of Power Projects (EEPE41)", prof: "Dr. Aneesa Farhan M A" },
+        "E1": { name: "Special Electrical Machines (EEPE25)", prof: "Dr. Jose Thankachan" },
+        "F1": { name: "Robotics (EEPE44)", prof: "Dr. Manas Ranjan Jena" },
+        "H": { name: "Electricity Markets (EEH018)", prof: "Dr. Aneesa Farhan M A" },
+        "G": { name: "Open Elective", prof: "TBD" },
+        "M": { name: "Minor", prof: "TBD" }
+    };
+
+    const timeSlots = [
+        { id: 1, start: "08:30", end: "09:20", label: "08.30 - 09.20" },
+        { id: 2, start: "09:20", end: "10:10", label: "09.20 - 10.10" },
+        { id: 3, start: "10:10", end: "10:30", label: "10.10 - 10.30", isBreak: true, name: "BREAK" },
+        { id: 4, start: "10:30", end: "11:20", label: "10.30 - 11.20" },
+        { id: 5, start: "11:20", end: "12:10", label: "11.20 - 12.10" },
+        { id: 6, start: "12:10", end: "13:30", label: "12.10 - 01.30", isBreak: true, name: "LUNCH BREAK" },
+        { id: 7, start: "13:30", end: "14:20", label: "01.30 - 02.20" },
+        { id: 8, start: "14:30", end: "15:20", label: "02.30 - 03.20" },
+        { id: 9, start: "15:20", end: "16:10", label: "03.20 - 04.10" },
+        { id: 10, start: "16:10", end: "17:00", label: "04.10 - 05.00" },
+        { id: 11, start: "17:00", end: "17:50", label: "05.00 - 05.50" }
+    ];
+
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    
+    // Default extracted schedule, load from local storage if edited previously
+    let schedule = JSON.parse(localStorage.getItem("btech_timetable")) || {
+        "Monday": { 1: "G", 2: "C1", 4: "D1", 5: "E1", 7: "None", 8: "None", 9: "None", 10: "H", 11: "None" },
+        "Tuesday": { 1: "G", 2: "M", 4: "E1", 5: "D1", 7: "F1", 8: "C1", 9: "H", 10: "None", 11: "None" },
+        "Wednesday": { 1: "D1", 2: "M", 4: "None", 5: "None", 7: "None", 8: "None", 9: "None", 10: "None", 11: "None" },
+        "Thursday": { 1: "E1", 2: "M", 4: "F1", 5: "None", 7: "None", 8: "None", 9: "None", 10: "H", 11: "None" },
+        "Friday": { 1: "F1", 2: "G", 4: "C1", 5: "None", 7: "None", 8: "None", 9: "None", 10: "H", 11: "None" }
+    };
+
+    let currentDay = days[new Date().getDay() - 1] || "Monday";
+    if (!days.includes(currentDay)) currentDay = "Monday"; // fallback for weekends
+    let isEditMode = false;
+    let notifiedSet = new Set();
+
+    function init() {
+        renderTabs();
+        renderSchedule();
+        if (Notification.permission === "granted") {
+            document.getElementById("notifyBtn").innerText = "Notifications Active";
+            document.getElementById("notifyBtn").classList.add("active-btn");
+        }
+        setInterval(checkUpcomingClasses, 60000); // Check every minute
+    }
+
+    function renderTabs() {
+        const tabsContainer = document.getElementById("dayTabs");
+        tabsContainer.innerHTML = "";
+        days.forEach(day => {
+            const tab = document.createElement("div");
+            tab.className = `tab ${day === currentDay ? 'active' : ''}`;
+            tab.innerText = day;
+            tab.onclick = () => {
+                currentDay = day;
+                renderTabs();
+                renderSchedule();
+            };
+            tabsContainer.appendChild(tab);
+        });
+    }
+
+    function renderSchedule() {
+        const container = document.getElementById("scheduleView");
+        container.innerHTML = "";
+
+        timeSlots.forEach(slot => {
+            const card = document.createElement("div");
+            card.className = `slot-card ${slot.isBreak ? 'break' : ''}`;
+
+            if (slot.isBreak) {
+                card.innerHTML = `${slot.label} - ${slot.name}`;
+            } else {
+                const subKey = schedule[currentDay][slot.id] || "None";
+                
+                let contentHTML = `<div class="time-col">${slot.label}</div>`;
+                
+                if (isEditMode) {
+                    let options = Object.keys(subjects).map(key => 
+                        `<option value="${key}" ${key === subKey ? 'selected' : ''}>${key !== 'None' ? key + ' - ' : ''}${subjects[key].name}</option>`
+                    ).join('');
+                    
+                    contentHTML += `
+                        <div class="details-col">
+                            <select onchange="updateSchedule('${currentDay}', ${slot.id}, this.value)">
+                                ${options}
+                            </select>
+                        </div>`;
+                } else {
+                    const subject = subjects[subKey];
+                    if (subKey === "None") {
+                        contentHTML += `<div class="details-col" style="color: var(--text-light)">Free Slot</div>`;
+                    } else {
+                        contentHTML += `
+                            <div class="details-col">
+                                <div class="subject-name">${subject.name} [${subKey}]</div>
+                                <div class="prof-name">${subject.prof}</div>
+                            </div>`;
+                    }
+                }
+                card.innerHTML = contentHTML;
+            }
+            container.appendChild(card);
+        });
+    }
+
+    function toggleEditMode() {
+        isEditMode = !isEditMode;
+        const btn = document.getElementById("editBtn");
+        if (isEditMode) {
+            btn.innerText = "Save Schedule";
+            btn.classList.add("active-btn");
+        } else {
+            btn.innerText = "Edit Schedule";
+            btn.classList.remove("active-btn");
+            localStorage.setItem("btech_timetable", JSON.stringify(schedule));
+        }
+        renderSchedule();
+    }
+
+    function updateSchedule(day, slotId, val) {
+        schedule[day][slotId] = val;
+    }
+
+    function enableNotifications() {
+        if (!("Notification" in window)) {
+            alert("This browser does not support desktop notification");
+            return;
+        }
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                const btn = document.getElementById("notifyBtn");
+                btn.innerText = "Notifications Active";
+                btn.classList.add("active-btn");
+                new Notification("Notifications Enabled", { body: "You will be notified 10 mins before classes."});
+            }
+        });
+    }
+
+    function checkUpcomingClasses() {
+        if (Notification.permission !== "granted") return;
+        
+        const now = new Date();
+        const todayIdx = now.getDay();
+        if (todayIdx < 1 || todayIdx > 5) return; // Weekend
+        
+        const todayStr = days[todayIdx - 1];
+        const currentMins = now.getHours() * 60 + now.getMinutes();
+
+        timeSlots.forEach(slot => {
+            if (slot.isBreak) return;
+            
+            const [hours, minutes] = slot.start.split(':').map(Number);
+            const slotStartMins = hours * 60 + minutes;
+            const diff = slotStartMins - currentMins;
+
+            // Notify if class is exactly 10 minutes away
+            if (diff > 0 && diff <= 10) {
+                const subKey = schedule[todayStr][slot.id];
+                if (subKey && subKey !== "None") {
+                    const notifyID = `${now.toDateString()}-${slot.id}`;
+                    if (!notifiedSet.has(notifyID)) {
+                        const subject = subjects[subKey];
+                        new Notification(`Upcoming Class in ${diff} mins!`, {
+                            body: `${subject.name} with ${subject.prof} at ${slot.start}`
+                        });
+                        notifiedSet.add(notifyID);
+                    }
+                }
+            }
+        });
+    }
+
+    // Initialize the app on load
+    window.onload = init;
+</script>
+</body>
+</html>
