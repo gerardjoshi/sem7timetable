@@ -14,6 +14,9 @@
             --text-light: #64748b;
             --border: #e2e8f0;
             --break-bg: #f1f5f9;
+            --fuchsia-bg: #fce7f3;
+            --fuchsia-border: #fbcfe8;
+            --fuchsia-text: #be185d;
         }
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -89,6 +92,7 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             align-items: center;
+            transition: all 0.2s ease;
         }
         .slot-card.break {
             background-color: var(--break-bg);
@@ -96,6 +100,17 @@
             padding: 12px;
             color: var(--text-light);
             font-weight: 500;
+        }
+        /* Highlight specific subjects */
+        .slot-card.highlight-fuchsia {
+            background-color: var(--fuchsia-bg);
+            border-color: var(--fuchsia-border);
+        }
+        .slot-card.highlight-fuchsia .time-col {
+            color: var(--fuchsia-text);
+        }
+        .slot-card.highlight-fuchsia .subject-name {
+            color: #9d174d;
         }
         .time-col {
             min-width: 120px;
@@ -157,6 +172,8 @@
         "M": { name: "Minor", prof: "TBD" }
     };
 
+    const attendedClasses = ["C1", "E1", "G"];
+
     const timeSlots = [
         { id: 1, start: "08:30", end: "09:20", label: "08.30 - 09.20" },
         { id: 2, start: "09:20", end: "10:10", label: "09.20 - 10.10" },
@@ -172,7 +189,7 @@
 
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
     
-    // Corrected extracted schedule, uses a new local storage key to clear out the previous version
+    // Core schedule data
     let schedule = JSON.parse(localStorage.getItem("btech_timetable_v2")) || {
         "Monday": { 1: "None", 2: "None", 3: "None", 4: "None", 5: "G", 6: "C1", 7: "D1", 8: "E1", 9: "H" },
         "Tuesday": { 1: "None", 2: "None", 3: "None", 4: "None", 5: "M", 6: "D1", 7: "E1", 8: "F1", 9: "None" },
@@ -225,6 +242,11 @@
             } else {
                 const subKey = schedule[currentDay][slot.id] || "None";
                 
+                // Highlight logic for specific active subjects (only when not editing for clarity)
+                if (attendedClasses.includes(subKey) && !isEditMode) {
+                    card.classList.add("highlight-fuchsia");
+                }
+
                 let contentHTML = `<div class="time-col">${slot.label}</div>`;
                 
                 if (isEditMode) {
